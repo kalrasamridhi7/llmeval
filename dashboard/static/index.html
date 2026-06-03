@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="LLMEval — Evaluate the output quality of any LLM-powered application with an interactive web dashboard.">
+    <title>LLMEval — LLM Output Quality Evaluation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header" id="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1 class="logo-text">LLMEval</h1>
+                <span class="logo-badge">v0.1.0</span>
+            </div>
+            <p class="header-subtitle">LLM Output Quality Evaluation</p>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container" id="main-container">
+        <!-- Tabs -->
+        <nav class="tabs" id="nav-tabs" role="tablist">
+            <button class="tab active" data-tab="single" role="tab" aria-selected="true" id="tab-single">
+                <span class="tab-icon">◉</span> Single Evaluation
+            </button>
+            <button class="tab" data-tab="batch" role="tab" aria-selected="false" id="tab-batch">
+                <span class="tab-icon">☰</span> Batch Evaluation
+            </button>
+            <div class="tab-indicator" id="tab-indicator"></div>
+        </nav>
+
+        <!-- Single Evaluation Tab -->
+        <section class="tab-panel active" id="panel-single" role="tabpanel">
+            <form class="eval-form" id="single-eval-form">
+                <div class="form-group">
+                    <label for="input-question" class="form-label">Question</label>
+                    <textarea id="input-question" class="form-textarea" rows="3"
+                        placeholder="What question was asked to the LLM?"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-context" class="form-label">Context</label>
+                    <textarea id="input-context" class="form-textarea" rows="5"
+                        placeholder="Paste the retrieved context or documents here..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-answer" class="form-label">Answer</label>
+                    <textarea id="input-answer" class="form-textarea" rows="5"
+                        placeholder="Paste the LLM's generated answer here..."></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Metrics</label>
+                        <div class="checkbox-group" id="metrics-checkboxes">
+                            <label class="checkbox-label" for="metric-faithfulness">
+                                <input type="checkbox" id="metric-faithfulness" value="faithfulness" checked>
+                                <span class="checkbox-custom"></span>
+                                Faithfulness
+                            </label>
+                            <label class="checkbox-label" for="metric-relevance">
+                                <input type="checkbox" id="metric-relevance" value="relevance" checked>
+                                <span class="checkbox-custom"></span>
+                                Relevance
+                            </label>
+                            <label class="checkbox-label" for="metric-hallucination">
+                                <input type="checkbox" id="metric-hallucination" value="hallucination" checked>
+                                <span class="checkbox-custom"></span>
+                                Hallucination
+                            </label>
+                            <label class="checkbox-label" for="metric-coherence">
+                                <input type="checkbox" id="metric-coherence" value="coherence" checked>
+                                <span class="checkbox-custom"></span>
+                                Coherence
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="model-select" class="form-label">Model</label>
+                        <select id="model-select" class="form-select">
+                            <option value="gpt-4o-mini" selected>gpt-4o-mini</option>
+                            <option value="gpt-4o">gpt-4o</option>
+                            <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="btn-evaluate">
+                    <span class="btn-text">Evaluate</span>
+                    <span class="btn-spinner" hidden></span>
+                </button>
+            </form>
+
+            <!-- Results Section -->
+            <div class="results-section" id="results-section" hidden>
+                <div class="results-header">
+                    <h2 class="section-title">Evaluation Results</h2>
+                    <button class="btn btn-secondary" id="btn-copy-json" title="Copy JSON to clipboard">
+                        📋 Copy JSON
+                    </button>
+                </div>
+
+                <!-- Overall Score Ring -->
+                <div class="overall-ring-container" id="overall-ring-container">
+                    <div class="score-ring-wrapper score-ring-large">
+                        <svg class="score-ring" viewBox="0 0 120 120">
+                            <circle class="ring-bg" cx="60" cy="60" r="52" />
+                            <circle class="ring-progress" id="overall-ring" cx="60" cy="60" r="52" />
+                        </svg>
+                        <div class="ring-label">
+                            <span class="ring-value" id="overall-value">0</span>
+                            <span class="ring-caption">Overall</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metric Score Rings -->
+                <div class="metric-rings" id="metric-rings"></div>
+
+                <!-- Explanations Accordion -->
+                <div class="explanations" id="explanations"></div>
+            </div>
+        </section>
+
+        <!-- Batch Evaluation Tab -->
+        <section class="tab-panel" id="panel-batch" role="tabpanel">
+            <!-- Upload Zone -->
+            <div class="upload-zone" id="upload-zone">
+                <div class="upload-icon">📁</div>
+                <p class="upload-text">Drag & drop a <strong>.json</strong> or <strong>.csv</strong> file here</p>
+                <p class="upload-hint">or click to browse</p>
+                <input type="file" id="file-input" accept=".json,.csv" hidden>
+                <p class="upload-format">
+                    JSON: <code>[{"question": "...", "context": "...", "answer": "..."}, ...]</code><br>
+                    CSV: columns named <code>question</code>, <code>context</code>, <code>answer</code>
+                </p>
+            </div>
+
+            <!-- File info -->
+            <div class="file-info" id="file-info" hidden>
+                <span class="file-name" id="file-name"></span>
+                <span class="file-rows" id="file-rows"></span>
+                <button class="btn btn-secondary btn-sm" id="btn-clear-file">✕ Clear</button>
+            </div>
+
+            <!-- Batch Options -->
+            <div class="batch-options" id="batch-options" hidden>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Metrics</label>
+                        <div class="checkbox-group" id="batch-metrics-checkboxes">
+                            <label class="checkbox-label" for="batch-metric-faithfulness">
+                                <input type="checkbox" id="batch-metric-faithfulness" value="faithfulness" checked>
+                                <span class="checkbox-custom"></span>
+                                Faithfulness
+                            </label>
+                            <label class="checkbox-label" for="batch-metric-relevance">
+                                <input type="checkbox" id="batch-metric-relevance" value="relevance" checked>
+                                <span class="checkbox-custom"></span>
+                                Relevance
+                            </label>
+                            <label class="checkbox-label" for="batch-metric-hallucination">
+                                <input type="checkbox" id="batch-metric-hallucination" value="hallucination" checked>
+                                <span class="checkbox-custom"></span>
+                                Hallucination
+                            </label>
+                            <label class="checkbox-label" for="batch-metric-coherence">
+                                <input type="checkbox" id="batch-metric-coherence" value="coherence" checked>
+                                <span class="checkbox-custom"></span>
+                                Coherence
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch-model-select" class="form-label">Model</label>
+                        <select id="batch-model-select" class="form-select">
+                            <option value="gpt-4o-mini" selected>gpt-4o-mini</option>
+                            <option value="gpt-4o">gpt-4o</option>
+                            <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="btn-batch-evaluate">
+                    <span class="btn-text">Evaluate Batch</span>
+                    <span class="btn-spinner" hidden></span>
+                </button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-container" id="progress-container" hidden>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <span class="progress-text" id="progress-text">Evaluating...</span>
+            </div>
+
+            <!-- Batch Results -->
+            <div class="batch-results" id="batch-results" hidden>
+                <div class="results-header">
+                    <h2 class="section-title">Batch Results</h2>
+                    <div class="results-actions">
+                        <button class="btn btn-secondary" id="btn-download-json">📥 Download JSON</button>
+                        <button class="btn btn-secondary" id="btn-download-report">📄 Download Report</button>
+                    </div>
+                </div>
+
+                <!-- Summary Stats -->
+                <div class="summary-stats" id="summary-stats"></div>
+
+                <!-- Results Table -->
+                <div class="table-container">
+                    <table class="results-table" id="results-table">
+                        <thead id="results-table-head"></thead>
+                        <tbody id="results-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="/static/main.js"></script>
+</body>
+</html>

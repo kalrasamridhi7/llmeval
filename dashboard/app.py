@@ -55,7 +55,7 @@ class EvaluateRequest(BaseModel):
         description="List of metrics to evaluate",
     )
     model: str = Field(
-        default="gpt-4o-mini",
+        default="gemini-1.5-flash",
         description="LLM model to use as judge",
     )
 
@@ -77,7 +77,7 @@ class BatchEvaluateRequest(BaseModel):
         description="List of metrics to evaluate",
     )
     model: str = Field(
-        default="gpt-4o-mini",
+        default="gemini-1.5-flash",
         description="LLM model to use as judge",
     )
 

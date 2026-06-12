@@ -24,7 +24,7 @@ def evaluate(
     context: str,
     answer: str,
     metrics: Optional[List[str]] = None,
-    model: str = "gpt-4o-mini",
+    model: str = "gemini-1.5-flash",
 ) -> Dict[str, Any]:
     """Evaluate a single LLM output across specified metrics.
 
@@ -68,7 +68,7 @@ def evaluate(
 def evaluate_batch(
     rows: List[Dict[str, str]],
     metrics: Optional[List[str]] = None,
-    model: str = "gpt-4o-mini",
+    model: str = "gemini-1.5-flash",
 ) -> List[Dict[str, Any]]:
     """Evaluate a batch of LLM outputs across specified metrics.
 

@@ -105,9 +105,13 @@ results = evaluate_batch(rows, metrics=["all"], model="gpt-4o-mini")
 
 ## 🔧 CLI Reference
 
-LLMEval provides a command-line interface using the `llmeval` command.
+LLMEval provides both a Python API and an interactive web dashboard for evaluating LLM outputs.
 
-### Single Evaluation
+## Demo
+
+![Dashboard Screenshot](dashboard_screenshot.png)
+
+## Features Evaluation
 
 Run a single evaluation and output an HTML report:
 

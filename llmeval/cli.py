@@ -26,7 +26,7 @@ from llmeval.report import generate_single_report, generate_batch_report
 console = Console()
 
 # Available model choices.
-MODEL_CHOICES = ["gpt-4o-mini", "gpt-4o", "claude-sonnet-4-6"]
+MODEL_CHOICES = ["gemini-1.5-flash", "gpt-4o-mini", "gpt-4o", "claude-sonnet-4-6"]
 
 # Available metric choices.
 METRIC_CHOICES = list(METRICS_REGISTRY.keys()) + ["all"]
@@ -137,10 +137,11 @@ def cli() -> None:
 )
 @click.option(
     "--model",
-    default="gpt-4o-mini",
+    default="gemini-1.5-flash",
     type=click.Choice(MODEL_CHOICES, case_sensitive=False),
-    help="LLM model to use as judge. Default: gpt-4o-mini.",
+    help="LLM model to use as judge. Default: gemini-1.5-flash.",
 )
+@click.argument('extra_args', nargs=-1, required=False)
 def evaluate_cmd(
     question: str,
     context: str,
@@ -148,11 +149,29 @@ def evaluate_cmd(
     metrics: tuple,
     output: str,
     model: str,
+    extra_args: tuple = (),
 ) -> None:
     """Evaluate a single LLM output across specified metrics."""
     metrics_list = list(metrics)
-    if "all" in metrics_list:
+    if extra_args:
+        metrics_list.extend(extra_args)
+
+    # Validate metrics
+    valid_metrics = []
+    for m in metrics_list:
+        m_clean = m.lower().strip()
+        if m_clean == "all":
+            continue
+        if m_clean not in METRICS_REGISTRY:
+            raise click.BadParameter(
+                f"Unknown metric '{m}'. Valid metrics: {list(METRICS_REGISTRY.keys())}"
+            )
+        valid_metrics.append(m_clean)
+
+    if not valid_metrics or "all" in [m.lower().strip() for m in metrics_list]:
         metrics_list = list(METRICS_REGISTRY.keys())
+    else:
+        metrics_list = valid_metrics
 
     console.print(
         Panel(
@@ -216,20 +235,39 @@ def evaluate_cmd(
 )
 @click.option(
     "--model",
-    default="gpt-4o-mini",
+    default="gemini-1.5-flash",
     type=click.Choice(MODEL_CHOICES, case_sensitive=False),
-    help="LLM model to use as judge. Default: gpt-4o-mini.",
+    help="LLM model to use as judge. Default: gemini-1.5-flash.",
 )
+@click.argument('extra_args', nargs=-1, required=False)
 def batch(
     input_file: str,
     metrics: tuple,
     output: str,
     model: str,
+    extra_args: tuple = (),
 ) -> None:
     """Evaluate a batch of LLM outputs from a JSON file."""
     metrics_list = list(metrics)
-    if "all" in metrics_list:
+    if extra_args:
+        metrics_list.extend(extra_args)
+
+    # Validate metrics
+    valid_metrics = []
+    for m in metrics_list:
+        m_clean = m.lower().strip()
+        if m_clean == "all":
+            continue
+        if m_clean not in METRICS_REGISTRY:
+            raise click.BadParameter(
+                f"Unknown metric '{m}'. Valid metrics: {list(METRICS_REGISTRY.keys())}"
+            )
+        valid_metrics.append(m_clean)
+
+    if not valid_metrics or "all" in [m.lower().strip() for m in metrics_list]:
         metrics_list = list(METRICS_REGISTRY.keys())
+    else:
+        metrics_list = valid_metrics
 
     # Load input data.
     try:

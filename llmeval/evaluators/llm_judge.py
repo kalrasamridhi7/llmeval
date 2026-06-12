@@ -57,17 +57,21 @@ class LLMJudge(ABC):
             model: The model identifier string.
 
         Returns:
-            'anthropic' if the model name starts with 'claude', otherwise 'openai'.
+            'anthropic' if the model name starts with 'claude',
+            'gemini' if the model name starts with 'gemini',
+            otherwise 'openai'.
         """
         if model.lower().startswith("claude"):
             return "anthropic"
+        elif model.lower().startswith("gemini"):
+            return "gemini"
         return "openai"
 
     def _get_client(self) -> Any:
         """Lazily initialise and return the API client.
 
         Returns:
-            An initialised OpenAI or Anthropic client instance.
+            An initialised OpenAI, Anthropic, or Gemini client instance.
 
         Raises:
             EnvironmentError: If the required API key is not set.
@@ -84,6 +88,16 @@ class LLMJudge(ABC):
                 )
             import anthropic
             self._client = anthropic.Anthropic(api_key=api_key)
+        elif self._provider == "gemini":
+            api_key = os.environ.get("GOOGLE_API_KEY", "")
+            if not api_key:
+                raise EnvironmentError(
+                    "GOOGLE_API_KEY environment variable is not set. "
+                    "Please add it to your .env file."
+                )
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            self._client = genai
         else:
             api_key = os.environ.get("OPENAI_API_KEY", "")
             if not api_key:
@@ -148,6 +162,24 @@ class LLMJudge(ABC):
                         messages=[{"role": "user", "content": user_prompt}],
                     )
                     raw_text = response.content[0].text
+                elif self._provider == "gemini":
+                    # Use Google Gemini API
+                    # Map gemini-1.5-flash to gemini-2.5-flash for current API compatibility
+                    model_name = self.model
+                    if model_name == "gemini-1.5-flash":
+                        model_name = "gemini-2.5-flash"
+                    model = client.GenerativeModel(
+                        model_name=model_name,
+                        system_instruction=system_prompt,
+                    )
+                    response = model.generate_content(
+                        user_prompt,
+                        generation_config=client.types.GenerationConfig(
+                            response_mime_type="application/json",
+                            temperature=0.0
+                        )
+                    )
+                    raw_text = response.text
                 else:
                     response = client.chat.completions.create(
                         model=self.model,

@@ -18,6 +18,7 @@ setup(
         "click>=8.0.0",
         "rich>=13.0.0",
         "python-dotenv>=1.0.0",
+        "ollama>=0.6.1",
     ],
     extras_require={
         "dev": [

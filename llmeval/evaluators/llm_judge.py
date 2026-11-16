@@ -15,6 +15,8 @@ import time
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Tuple
+from ollama import chat
+from ollama import ChatResponse
 
 logger = logging.getLogger(__name__)
 
@@ -149,48 +151,20 @@ class LLMJudge(ABC):
             RuntimeError: If all retry attempts fail.
             ValueError: If the response cannot be parsed as JSON.
         """
-        client = self._get_client()
         last_exception = None  # type: Optional[Exception]
 
         for attempt in range(MAX_RETRIES + 1):
             try:
-                if self._provider == "anthropic":
-                    response = client.messages.create(
-                        model=self.model,
-                        max_tokens=2048,
-                        system=system_prompt,
-                        messages=[{"role": "user", "content": user_prompt}],
-                    )
-                    raw_text = response.content[0].text
-                elif self._provider == "gemini":
-                    # Use Google Gemini API
-                    # Map gemini-1.5-flash to gemini-2.5-flash for current API compatibility
-                    model_name = self.model
-                    if model_name == "gemini-1.5-flash":
-                        model_name = "gemini-2.5-flash"
-                    model = client.GenerativeModel(
-                        model_name=model_name,
-                        system_instruction=system_prompt,
-                    )
-                    response = model.generate_content(
-                        user_prompt,
-                        generation_config=client.types.GenerationConfig(
-                            response_mime_type="application/json",
-                            temperature=0.0
-                        )
-                    )
-                    raw_text = response.text
-                else:
-                    response = client.chat.completions.create(
-                        model=self.model,
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt},
-                        ],
-                        temperature=0.0,
-                        max_tokens=2048,
-                    )
-                    raw_text = response.choices[0].message.content
+                response: ChatResponse = chat(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.0,
+                    max_tokens=2048,
+                )
+                raw_text = response.message.content
 
                 return self._parse_json_response(raw_text)
 
